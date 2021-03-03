@@ -90,3 +90,23 @@ impl TryFrom<File> for FileMedia {
         }
     }
 }
+
+impl TryFrom<RawFd> for FileMedia {
+    type Error = crate::Error;
+
+    /// Try to convert from a RawFd
+    ///
+    /// It is important to make sure the descriptor will live long enough
+   fn try_from(fd: RawFd) -> ::Result<Self> {
+        let mut ptr = mem::MaybeUninit::uninit();
+
+        match unsafe { ::gphoto2::gp_file_new_from_fd(ptr.as_mut_ptr(), fd) } {
+            ::gphoto2::GP_OK => {
+                Ok(FileMedia { file: unsafe { ptr.assume_init() } })
+            },
+	    err => {
+                Err(::error::from_libgphoto2(err))
+	    }
+        }
+    }
+}
