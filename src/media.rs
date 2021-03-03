@@ -1,6 +1,8 @@
 use std::ffi::{CString};
+use std::fs::File;
 use std::mem;
 use std::path::Path;
+use std::convert::TryFrom;
 
 use std::os::unix::prelude::*;
 
@@ -69,5 +71,22 @@ impl Media for FileMedia {
     #[doc(hidden)]
     unsafe fn as_mut_ptr(&mut self) -> *mut ::gphoto2::CameraFile {
         self.file
+    }
+}
+
+impl TryFrom<File> for FileMedia {
+    type Error = crate::Error;
+
+    fn try_from(f: File) -> ::Result<Self> {
+        let mut ptr = mem::MaybeUninit::uninit();
+
+        match unsafe { ::gphoto2::gp_file_new_from_fd(ptr.as_mut_ptr(), f.into_raw_fd()) } {
+            ::gphoto2::GP_OK => {
+                Ok(FileMedia { file: unsafe { ptr.assume_init() } })
+            },
+	    err => {
+                Err(::error::from_libgphoto2(err))
+	    }
+        }
     }
 }
