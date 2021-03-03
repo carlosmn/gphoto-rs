@@ -50,11 +50,11 @@ impl FileMedia {
             return Err(::error::from_libgphoto2(::gphoto2::GP_ERROR_FILE_EXISTS));
         }
 
-        let mut ptr = unsafe { mem::uninitialized() };
+        let mut file = mem::MaybeUninit::uninit();
 
-        match unsafe { ::gphoto2::gp_file_new_from_fd(&mut ptr, fd) } {
+        match unsafe { ::gphoto2::gp_file_new_from_fd(file.as_mut_ptr(), fd) } {
             ::gphoto2::GP_OK => {
-                Ok(FileMedia { file: ptr })
+                Ok(FileMedia { file: unsafe { file.assume_init() } })
             },
             err => {
                 unsafe {
