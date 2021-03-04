@@ -66,7 +66,7 @@ impl Camera {
     }
 
     /// Returns information about the port the camera is connected to.
-    pub fn port<'a>(&'a self) -> Port<'a> {
+    pub fn port(&self) -> Port {
         let mut port = mem::MaybeUninit::uninit();
 
         unsafe {

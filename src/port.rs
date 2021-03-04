@@ -102,7 +102,7 @@ impl<'a> Port<'a> {
 }
 
 #[doc(hidden)]
-pub fn from_libgphoto2<'a>(_camera: &'a ::camera::Camera, ptr: ::gphoto2::GPPortInfo) -> Port<'a> {
+pub fn from_libgphoto2(_camera: & ::camera::Camera, ptr: ::gphoto2::GPPortInfo) -> Port {
     Port {
         inner: ptr,
         __phantom: PhantomData,
