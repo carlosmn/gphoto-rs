@@ -26,11 +26,11 @@ impl Drop for Camera {
 impl Camera {
     /// Opens the first detected camera.
     pub fn autodetect(context: &mut Context) -> ::Result<Self> {
-        let mut ptr = unsafe { mem::uninitialized() };
+        let mut camera = mem::MaybeUninit::uninit();
 
-        try_unsafe!(::gphoto2::gp_camera_new(&mut ptr));
+        try_unsafe!(::gphoto2::gp_camera_new(camera.as_mut_ptr()));
 
-        let camera = Camera { camera: ptr };
+        let camera = Camera { camera: unsafe { camera.assume_init() } };
 
         try_unsafe!(::gphoto2::gp_camera_init(camera.camera, context.as_mut_ptr()));
 
@@ -39,16 +39,16 @@ impl Camera {
 
     /// Captures an image.
     pub fn capture_image(&mut self, context: &mut Context) -> ::Result<CameraFile> {
-        let mut file_path = unsafe { mem::uninitialized() };
+        let mut file_path = mem::MaybeUninit::uninit();
 
         try_unsafe! {
             ::gphoto2::gp_camera_capture(self.camera,
                                          ::gphoto2::GP_CAPTURE_IMAGE,
-                                         &mut file_path,
+                                         file_path.as_mut_ptr(),
                                          context.as_mut_ptr())
         };
 
-        Ok(CameraFile { inner: file_path })
+        Ok(CameraFile { inner: unsafe { file_path.assume_init() } })
     }
 
     /// Downloads a file from the camera.
@@ -67,42 +67,42 @@ impl Camera {
 
     /// Returns information about the port the camera is connected to.
     pub fn port<'a>(&'a self) -> Port<'a> {
-        let mut ptr = unsafe { mem::uninitialized() };
+        let mut port = mem::MaybeUninit::uninit();
 
         unsafe {
-            assert_eq!(::gphoto2::GP_OK, ::gphoto2::gp_camera_get_port_info(self.camera, &mut ptr));
+            assert_eq!(::gphoto2::GP_OK, ::gphoto2::gp_camera_get_port_info(self.camera, port.as_mut_ptr()));
         }
 
-        ::port::from_libgphoto2(self, ptr)
+        ::port::from_libgphoto2(self, unsafe { port.assume_init() })
     }
 
     /// Retrieves the camera's abilities.
     pub fn abilities(&self) -> Abilities {
-        let mut abilities = unsafe { mem::uninitialized() };
+        let mut abilities = mem::MaybeUninit::uninit();
 
         unsafe {
-            assert_eq!(::gphoto2::GP_OK, ::gphoto2::gp_camera_get_abilities(self.camera, &mut abilities));
+            assert_eq!(::gphoto2::GP_OK, ::gphoto2::gp_camera_get_abilities(self.camera, abilities.as_mut_ptr()));
         }
 
-        ::abilities::from_libgphoto2(abilities)
+        ::abilities::from_libgphoto2(unsafe { abilities.assume_init() })
     }
 
     /// Retrieves information about the camera's storage.
     ///
     /// Returns a `Vec` containing one `Storage` for each filesystem on the device.
     pub fn storage(&mut self, context: &mut Context) -> ::Result<Vec<Storage>> {
-        let mut ptr = unsafe { mem::uninitialized() };
-        let mut len = unsafe { mem::uninitialized() };
+        let mut ptr = mem::MaybeUninit::uninit();
+	let mut len = mem::MaybeUninit::uninit();
 
         try_unsafe! {
             ::gphoto2::gp_camera_get_storageinfo(self.camera,
-                                                 &mut ptr,
-                                                 &mut len,
+                                                 ptr.as_mut_ptr(),
+                                                 len.as_mut_ptr(),
                                                  context.as_mut_ptr())
         };
 
-        let storage = ptr as *mut Storage;
-        let length = len as usize;
+        let storage = unsafe { ptr.assume_init() } as *mut Storage;
+        let length = unsafe { len.assume_init() } as usize;
 
         Ok(unsafe { Vec::from_raw_parts(storage, length, length) })
     }
@@ -119,11 +119,11 @@ impl Camera {
     /// * `NotSupported` if there is no summary available for the camera.
     /// * `CorruptedData` if the summary is invalid UTF-8.
     pub fn summary(&mut self, context: &mut Context) -> ::Result<String> {
-        let mut summary = unsafe { mem::uninitialized() };
+        let mut summary = mem::MaybeUninit::uninit();
 
-        try_unsafe!(::gphoto2::gp_camera_get_summary(self.camera, &mut summary, context.as_mut_ptr()));
+        try_unsafe!(::gphoto2::gp_camera_get_summary(self.camera, summary.as_mut_ptr(), context.as_mut_ptr()));
 
-        util::camera_text_to_string(summary)
+        util::camera_text_to_string(unsafe { summary.assume_init() })
     }
 
     /// Returns the camera's manual.
@@ -137,11 +137,11 @@ impl Camera {
     /// * `NotSupported` if there is no manual available for the camera.
     /// * `CorruptedData` if the summary is invalid UTF-8.
     pub fn manual(&mut self, context: &mut Context) -> ::Result<String> {
-        let mut manual = unsafe { mem::uninitialized() };
+        let mut manual = mem::MaybeUninit::uninit();
 
-        try_unsafe!(::gphoto2::gp_camera_get_manual(self.camera, &mut manual, context.as_mut_ptr()));
+        try_unsafe!(::gphoto2::gp_camera_get_manual(self.camera, manual.as_mut_ptr(), context.as_mut_ptr()));
 
-        util::camera_text_to_string(manual)
+        util::camera_text_to_string(unsafe { manual.assume_init() })
     }
 
     /// Returns information about the camera driver.
@@ -155,11 +155,11 @@ impl Camera {
     /// * `NotSupported` if there is no about text available for the camera's driver.
     /// * `CorruptedData` if the summary is invalid UTF-8.
     pub fn about_driver(&mut self, context: &mut Context) -> ::Result<String> {
-        let mut about = unsafe { mem::uninitialized() };
+        let mut about = mem::MaybeUninit::uninit();
 
-        try_unsafe!(::gphoto2::gp_camera_get_about(self.camera, &mut about, context.as_mut_ptr()));
+        try_unsafe!(::gphoto2::gp_camera_get_about(self.camera, about.as_mut_ptr(), context.as_mut_ptr()));
 
-        util::camera_text_to_string(about)
+        util::camera_text_to_string(unsafe { about.assume_init() })
     }
 }
 

@@ -1,6 +1,8 @@
 use std::ffi::{CString};
+use std::fs::File;
 use std::mem;
 use std::path::Path;
+use std::convert::TryFrom;
 
 use std::os::unix::prelude::*;
 
@@ -48,11 +50,11 @@ impl FileMedia {
             return Err(::error::from_libgphoto2(::gphoto2::GP_ERROR_FILE_EXISTS));
         }
 
-        let mut ptr = unsafe { mem::uninitialized() };
+        let mut file = mem::MaybeUninit::uninit();
 
-        match unsafe { ::gphoto2::gp_file_new_from_fd(&mut ptr, fd) } {
+        match unsafe { ::gphoto2::gp_file_new_from_fd(file.as_mut_ptr(), fd) } {
             ::gphoto2::GP_OK => {
-                Ok(FileMedia { file: ptr })
+                Ok(FileMedia { file: unsafe { file.assume_init() } })
             },
             err => {
                 unsafe {
@@ -69,5 +71,42 @@ impl Media for FileMedia {
     #[doc(hidden)]
     unsafe fn as_mut_ptr(&mut self) -> *mut ::gphoto2::CameraFile {
         self.file
+    }
+}
+
+impl TryFrom<File> for FileMedia {
+    type Error = crate::Error;
+
+    fn try_from(f: File) -> ::Result<Self> {
+        let mut ptr = mem::MaybeUninit::uninit();
+
+        match unsafe { ::gphoto2::gp_file_new_from_fd(ptr.as_mut_ptr(), f.into_raw_fd()) } {
+            ::gphoto2::GP_OK => {
+                Ok(FileMedia { file: unsafe { ptr.assume_init() } })
+            },
+	    err => {
+                Err(::error::from_libgphoto2(err))
+	    }
+        }
+    }
+}
+
+impl TryFrom<RawFd> for FileMedia {
+    type Error = crate::Error;
+
+    /// Try to convert from a RawFd
+    ///
+    /// It is important to make sure the descriptor will live long enough
+   fn try_from(fd: RawFd) -> ::Result<Self> {
+        let mut ptr = mem::MaybeUninit::uninit();
+
+        match unsafe { ::gphoto2::gp_file_new_from_fd(ptr.as_mut_ptr(), fd) } {
+            ::gphoto2::GP_OK => {
+                Ok(FileMedia { file: unsafe { ptr.assume_init() } })
+            },
+	    err => {
+                Err(::error::from_libgphoto2(err))
+	    }
+        }
     }
 }

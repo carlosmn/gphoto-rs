@@ -63,13 +63,13 @@ pub struct Port<'a> {
 impl<'a> Port<'a> {
     /// Returns the type of the port.
     pub fn port_type(&self) -> PortType {
-        let mut port_type = unsafe { mem::uninitialized() };
+        let mut port_type = mem::MaybeUninit::uninit();
 
         unsafe {
-            assert_eq!(::gphoto2::GP_OK, ::gphoto2::gp_port_info_get_type(self.inner, &mut port_type));
+            assert_eq!(::gphoto2::GP_OK, ::gphoto2::gp_port_info_get_type(self.inner, port_type.as_mut_ptr()));
         }
 
-        match port_type {
+        match unsafe { port_type.assume_init() } {
             ::gphoto2::GP_PORT_SERIAL          => PortType::Serial,
             ::gphoto2::GP_PORT_USB             => PortType::USB,
             ::gphoto2::GP_PORT_DISK            => PortType::Disk,
@@ -82,21 +82,21 @@ impl<'a> Port<'a> {
 
     /// Returns the name of the port.
     pub fn name(&self) -> Cow<str> {
-        let mut name = unsafe { mem::uninitialized() };
+        let mut name = mem::MaybeUninit::uninit();
 
         unsafe {
-            assert_eq!(::gphoto2::GP_OK, ::gphoto2::gp_port_info_get_name(self.inner, &mut name));
-            String::from_utf8_lossy(CStr::from_ptr(name).to_bytes())
+            assert_eq!(::gphoto2::GP_OK, ::gphoto2::gp_port_info_get_name(self.inner, name.as_mut_ptr()));
+            String::from_utf8_lossy(CStr::from_ptr(name.assume_init()).to_bytes())
         }
     }
 
     /// Returns the path of the port.
     pub fn path(&self) -> Cow<str> {
-        let mut path = unsafe { mem::uninitialized() };
+        let mut path = mem::MaybeUninit::uninit();
 
         unsafe {
-            assert_eq!(::gphoto2::GP_OK, ::gphoto2::gp_port_info_get_path(self.inner, &mut path));
-            String::from_utf8_lossy(CStr::from_ptr(path).to_bytes())
+            assert_eq!(::gphoto2::GP_OK, ::gphoto2::gp_port_info_get_path(self.inner, path.as_mut_ptr()));
+            String::from_utf8_lossy(CStr::from_ptr(path.assume_init()).to_bytes())
         }
     }
 }
