@@ -50,7 +50,7 @@ impl FileMedia {
             return Err(::error::from_libgphoto2(::gphoto2::GP_ERROR_FILE_EXISTS));
         }
 
-	Self::from_raw_fd(fd)
+	unsafe { Self::from_raw_fd(fd) }
     }
 
     /// Create a new FileMedia to store data in memory.
@@ -84,12 +84,18 @@ impl FileMedia {
     ///
     /// Care must the taken that the descriptor is not owned by something else
     /// that might free it while this object lives.
-    pub fn from_raw_fd(fd: RawFd) -> ::Result<Self> {
+    ///
+    /// # Safety
+    ///
+    /// This is marked as unsafe for the same reason as the FromRawFd, namely
+    /// that we take onwership of the file descriptor but we cannot guarantee
+    /// this as part of the type system.
+    pub unsafe fn from_raw_fd(fd: RawFd) -> ::Result<Self> {
         let mut ptr = mem::MaybeUninit::uninit();
 
-        match unsafe { ::gphoto2::gp_file_new_from_fd(ptr.as_mut_ptr(), fd) } {
+        match ::gphoto2::gp_file_new_from_fd(ptr.as_mut_ptr(), fd) {
             ::gphoto2::GP_OK => {
-                Ok(FileMedia { file: unsafe { ptr.assume_init() } })
+                Ok(FileMedia { file: ptr.assume_init() })
             },
 	    err => {
                 Err(::error::from_libgphoto2(err))
@@ -129,16 +135,5 @@ impl TryFrom<File> for FileMedia {
 
     fn try_from(f: File) -> ::Result<Self> {
 	FileMedia::from_file(f)
-    }
-}
-
-impl TryFrom<RawFd> for FileMedia {
-    type Error = crate::Error;
-
-    /// Try to convert from a RawFd
-    ///
-    /// It is important to make sure the descriptor will live long enough
-   fn try_from(fd: RawFd) -> ::Result<Self> {
-       FileMedia::from_raw_fd(fd)
     }
 }
