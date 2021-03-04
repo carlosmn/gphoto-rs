@@ -2,7 +2,7 @@ use std::ffi::{CString};
 use std::fs::File;
 use std::mem;
 use std::path::Path;
-use std::convert::{TryFrom, TryInto};
+use std::convert::{TryFrom};
 
 use std::os::unix::prelude::*;
 
@@ -50,10 +50,10 @@ impl FileMedia {
             return Err(::error::from_libgphoto2(::gphoto2::GP_ERROR_FILE_EXISTS));
         }
 
-	fd.try_into()
+	Self::from_raw_fd(fd)
     }
 
-    /// Create a new FileMedia to store data in memory
+    /// Create a new FileMedia to store data in memory.
     pub fn new() -> ::Result<Self> {
         let mut file = mem::MaybeUninit::uninit();
         match unsafe { ::gphoto2::gp_file_new(file.as_mut_ptr()) } {
@@ -63,6 +63,37 @@ impl FileMedia {
             err => {
                 Err(::error::from_libgphoto2(err))
             }
+        }
+    }
+
+    /// Create a FileMedia from a File.
+    pub fn from_file(f: File) -> ::Result<Self> {
+        let mut ptr = mem::MaybeUninit::uninit();
+
+        match unsafe { ::gphoto2::gp_file_new_from_fd(ptr.as_mut_ptr(), f.into_raw_fd()) } {
+            ::gphoto2::GP_OK => {
+                Ok(FileMedia { file: unsafe { ptr.assume_init() } })
+            },
+	    err => {
+                Err(::error::from_libgphoto2(err))
+	    }
+        }
+    }
+
+    /// Create a FileMedia from a RawFd.
+    ///
+    /// Care must the taken that the descriptor is not owned by something else
+    /// that might free it while this object lives.
+    pub fn from_raw_fd(fd: RawFd) -> ::Result<Self> {
+        let mut ptr = mem::MaybeUninit::uninit();
+
+        match unsafe { ::gphoto2::gp_file_new_from_fd(ptr.as_mut_ptr(), fd) } {
+            ::gphoto2::GP_OK => {
+                Ok(FileMedia { file: unsafe { ptr.assume_init() } })
+            },
+	    err => {
+                Err(::error::from_libgphoto2(err))
+	    }
         }
     }
 }
@@ -78,16 +109,7 @@ impl TryFrom<File> for FileMedia {
     type Error = crate::Error;
 
     fn try_from(f: File) -> ::Result<Self> {
-        let mut ptr = mem::MaybeUninit::uninit();
-
-        match unsafe { ::gphoto2::gp_file_new_from_fd(ptr.as_mut_ptr(), f.into_raw_fd()) } {
-            ::gphoto2::GP_OK => {
-                Ok(FileMedia { file: unsafe { ptr.assume_init() } })
-            },
-	    err => {
-                Err(::error::from_libgphoto2(err))
-	    }
-        }
+	FileMedia::from_file(f)
     }
 }
 
@@ -98,15 +120,6 @@ impl TryFrom<RawFd> for FileMedia {
     ///
     /// It is important to make sure the descriptor will live long enough
    fn try_from(fd: RawFd) -> ::Result<Self> {
-        let mut ptr = mem::MaybeUninit::uninit();
-
-        match unsafe { ::gphoto2::gp_file_new_from_fd(ptr.as_mut_ptr(), fd) } {
-            ::gphoto2::GP_OK => {
-                Ok(FileMedia { file: unsafe { ptr.assume_init() } })
-            },
-	    err => {
-                Err(::error::from_libgphoto2(err))
-	    }
-        }
+       FileMedia::from_raw_fd(fd)
     }
 }
