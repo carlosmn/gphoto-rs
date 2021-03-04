@@ -1,5 +1,4 @@
-use std::ffi::{CString};
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::{mem, slice};
 use std::path::Path;
 use std::convert::{TryFrom};
@@ -38,19 +37,15 @@ impl FileMedia {
     ///
     /// * `FileExists` if the file already exists.
     pub fn create(path: &Path) -> ::Result<Self> {
-        use ::libc::{O_CREAT,O_EXCL,O_RDWR};
+	let file = match OpenOptions::new().create_new(true).read(true).write(true).open(path) {
+	    Ok(f) => f,
+	    Err(_) => {
+		// This should be more specific but this what we have for now
+		return Err(::error::from_libgphoto2(::gphoto2::GP_ERROR_FILE_EXISTS));
+	    }
+	};
 
-        let cstr = match CString::new(path.as_os_str().as_bytes()) {
-            Ok(s) => s,
-            Err(_) => return Err(::error::from_libgphoto2(::gphoto2::GP_ERROR_BAD_PARAMETERS))
-        };
-
-        let fd = unsafe { ::libc::open(cstr.as_ptr(), O_CREAT|O_EXCL|O_RDWR, 0o644) };
-        if fd < 0 {
-            return Err(::error::from_libgphoto2(::gphoto2::GP_ERROR_FILE_EXISTS));
-        }
-
-	unsafe { Self::from_raw_fd(fd) }
+	Self::from_file(file)
     }
 
     /// Create a new FileMedia to store data in memory.
