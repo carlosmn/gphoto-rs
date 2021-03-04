@@ -2,7 +2,7 @@ use std::ffi::{CString};
 use std::fs::File;
 use std::mem;
 use std::path::Path;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 
 use std::os::unix::prelude::*;
 
@@ -50,20 +50,7 @@ impl FileMedia {
             return Err(::error::from_libgphoto2(::gphoto2::GP_ERROR_FILE_EXISTS));
         }
 
-        let mut file = mem::MaybeUninit::uninit();
-
-        match unsafe { ::gphoto2::gp_file_new_from_fd(file.as_mut_ptr(), fd) } {
-            ::gphoto2::GP_OK => {
-                Ok(FileMedia { file: unsafe { file.assume_init() } })
-            },
-            err => {
-                unsafe {
-                    ::libc::close(fd);
-                }
-
-                Err(::error::from_libgphoto2(err))
-            }
-        }
+	fd.try_into()
     }
 
     /// Create a new FileMedia to store data in memory
