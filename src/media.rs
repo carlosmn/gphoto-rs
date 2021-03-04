@@ -65,6 +65,19 @@ impl FileMedia {
             }
         }
     }
+
+    /// Create a new FileMedia to store data in memory
+    pub fn new() -> ::Result<Self> {
+        let mut file = mem::MaybeUninit::uninit();
+        match unsafe { ::gphoto2::gp_file_new(file.as_mut_ptr()) } {
+            ::gphoto2::GP_OK => {
+                Ok(FileMedia { file: unsafe { file.assume_init() } })
+            },
+            err => {
+                Err(::error::from_libgphoto2(err))
+            }
+        }
+    }
 }
 
 impl Media for FileMedia {
