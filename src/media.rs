@@ -1,6 +1,6 @@
 use std::ffi::{CString};
 use std::fs::File;
-use std::mem;
+use std::{mem, slice};
 use std::path::Path;
 use std::convert::{TryFrom};
 
@@ -95,6 +95,25 @@ impl FileMedia {
                 Err(::error::from_libgphoto2(err))
 	    }
         }
+    }
+
+    /// Retrieve the data from this FileMedia
+    ///
+    /// Note that this can cause us to read the file contents from disk.
+    pub fn data(&self) -> ::Result<&[u8]> {
+	let mut data = mem::MaybeUninit::uninit();
+	let mut size = mem::MaybeUninit::uninit();
+	match unsafe { ::gphoto2::gp_file_get_data_and_size(self.file, data.as_mut_ptr(), size.as_mut_ptr()) } {
+	    ::gphoto2::GP_OK => {
+		unsafe {
+		    // The data already lives in memory so the size cast is fine
+		    Ok(slice::from_raw_parts(data.assume_init() as *const u8, size.assume_init() as usize))
+		}
+            },
+	    err => {
+                Err(::error::from_libgphoto2(err))
+	    }
+	}
     }
 }
 
