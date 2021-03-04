@@ -41,7 +41,7 @@ impl LibraryVersion {
 
         let mut len: usize = 0;
 
-        while !unsafe { *ptr.offset(len as isize) }.is_null() {
+        while !unsafe { *ptr.add(len) }.is_null() {
             len += 1;
         }
 

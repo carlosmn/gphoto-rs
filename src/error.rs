@@ -110,7 +110,7 @@ impl StdError for Error {
 
 #[doc(hidden)]
 pub fn from_libgphoto2(err: c_int) -> Error {
-    Error { err: err }
+    Error { err }
 }
 
 #[doc(hidden)]
