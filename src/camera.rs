@@ -65,6 +65,15 @@ impl Camera {
         Ok(())
     }
 
+    /// Captures a preview image and stores it in the given destination
+    pub fn capture_preview<T: Media>(&mut self, context: &mut Context, destination: &mut T) -> ::Result<()> {
+	try_unsafe! {
+	    ::gphoto2::gp_camera_capture_preview(self.camera, destination.as_mut_ptr(), context.as_mut_ptr())
+	};
+
+	Ok(())
+    }
+
     /// Returns information about the port the camera is connected to.
     pub fn port(&self) -> Port {
         let mut port = mem::MaybeUninit::uninit();
