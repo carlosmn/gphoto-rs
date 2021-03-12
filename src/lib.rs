@@ -3,7 +3,7 @@ extern crate libc;
 
 pub use error::{Result,Error,ErrorKind};
 pub use abilities::{Abilities,DeviceType,DriverStatus,CameraOperation,FileOperation,FolderOperation};
-pub use camera::{Camera,CameraFile};
+pub use camera::{Camera,CameraFile,CameraList};
 pub use context::{Context};
 pub use media::{Media,FileMedia};
 pub use port::{PortType,Port};

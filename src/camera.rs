@@ -191,6 +191,80 @@ impl Camera {
     }
 }
 
+/// A structure representing a list of cameras connected to the system
+#[repr(transparent)]
+pub struct CameraList(*mut ::gphoto2::CameraList);
+
+impl Drop for CameraList {
+    fn drop(&mut self) {
+        unsafe {
+            ::gphoto2::gp_list_unref(self.0);
+        }
+    }
+}
+
+impl CameraList {
+    /// Allocate a new list
+    fn new() -> ::Result<Self> {
+        let mut list = mem::MaybeUninit::uninit();
+        try_unsafe!(::gphoto2::gp_list_new(list.as_mut_ptr()));
+        let list = unsafe { list.assume_init() };
+
+        Ok(CameraList(list))
+    }
+
+    /// Return a mutable underlying pointer
+    fn as_mut_ptr(&mut self) -> *mut ::gphoto2::CameraList {
+        self.0
+    }
+
+    /// Get the amount of entries in the list
+    pub fn len(&mut self) -> usize {
+        let l = unsafe { ::gphoto2::gp_list_count(self.0) };
+
+        if l < 0 {
+            panic!();
+        }
+
+        l as usize
+    }
+
+    /// Get the name of the ith entry in the list as a CStr
+    ///
+    /// This version avoids allocating the String and the lossy conversion.
+    pub fn name_cstr(&mut self, i: usize) -> ::Result<&CStr> {
+        let i = i as libc::c_int;
+        let mut cname = mem::MaybeUninit::uninit();
+        try_unsafe! { ::gphoto2::gp_list_get_name(self.0, i, cname.as_mut_ptr()) };
+
+        Ok(unsafe { CStr::from_ptr(cname.assume_init()) })
+    }
+
+    /// Get the name of the ith entry in the list
+    pub fn name(&mut self, i: usize) -> ::Result<String> {
+        self.name_cstr(i)
+            .map(CStr::to_string_lossy)
+            .map(Cow::into_owned)
+    }
+
+    /// Get the value of the ith entry in the list as a CStr
+    ///
+    /// This version avoids allocating the String and the lossy conversion.
+    pub fn value_cstr(&mut self, i: usize) -> ::Result<&CStr> {
+        let i = i as libc::c_int;
+        let mut cvalue = mem::MaybeUninit::uninit();
+        try_unsafe! { ::gphoto2::gp_list_get_name(self.0, i, cvalue.as_mut_ptr()) };
+
+        Ok(unsafe { CStr::from_ptr(cvalue.assume_init()) })
+    }
+
+    /// Get the value of the ith entry in the list
+    pub fn value(&mut self, i: usize) -> ::Result<String> {
+        self.value_cstr(i)
+            .map(CStr::to_string_lossy)
+            .map(Cow::into_owned)
+    }
+}
 
 /// A file stored on a camera's storage.
 pub struct CameraFile {
