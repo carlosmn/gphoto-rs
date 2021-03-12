@@ -24,6 +24,25 @@ impl Drop for Camera {
 }
 
 impl Camera {
+    /// Create a new Camera instance
+    pub fn new() -> ::Result<Self> {
+        let mut camera = mem::MaybeUninit::uninit();
+
+        try_unsafe!(::gphoto2::gp_camera_new(camera.as_mut_ptr()));
+        Ok(Self {
+            camera: unsafe { camera.assume_init() },
+        })
+    }
+
+    /// Initialize the camera.
+    ///
+    /// If this Camera has not been set up, the library will select the first
+    /// one it detects.
+    pub fn init(&mut self, context: &mut Context) -> ::Result<()> {
+        try_unsafe!(::gphoto2::gp_camera_init(self.camera, context.as_mut_ptr()));
+        Ok(())
+    }
+
     /// Opens the first detected camera.
     pub fn autodetect(context: &mut Context) -> ::Result<Self> {
         let mut camera = mem::MaybeUninit::uninit();
