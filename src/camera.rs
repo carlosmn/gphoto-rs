@@ -43,17 +43,19 @@ impl Camera {
         Ok(())
     }
 
-    /// Opens the first detected camera.
-    pub fn autodetect(context: &mut Context) -> ::Result<Self> {
-        let mut camera = mem::MaybeUninit::uninit();
+    /// Return a list of detected cameras
+    ///
+    /// The 'name' in the returned CameraList is the name of the camera and the
+    /// 'value' is the port where they're attached.
+    pub fn autodetect(context: &mut Context) -> ::Result<CameraList> {
+        let mut list = CameraList::new()?;
 
-        try_unsafe!(::gphoto2::gp_camera_new(camera.as_mut_ptr()));
+        try_unsafe!(::gphoto2::gp_camera_autodetect(
+            list.as_mut_ptr(),
+            context.as_mut_ptr()
+        ));
 
-        let camera = Camera { camera: unsafe { camera.assume_init() } };
-
-        try_unsafe!(::gphoto2::gp_camera_init(camera.camera, context.as_mut_ptr()));
-
-        Ok(camera)
+        Ok(list)
     }
 
     /// Captures an image.

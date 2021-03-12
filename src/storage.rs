@@ -9,7 +9,8 @@ use std::ffi::CStr;
 ///
 /// ```no_run
 /// let mut context = gphoto::Context::new().unwrap();
-/// let mut camera = gphoto::Camera::autodetect(&mut context).unwrap();
+/// let mut camera = gphoto::Camera::new().unwrap();
+/// camera.init(&mut context).unwrap();
 ///
 /// for storage in camera.storage(&mut context).unwrap() {
 ///     println!("       base dir = {:?}", storage.base_dir());

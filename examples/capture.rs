@@ -11,7 +11,11 @@ fn main() {
     // open camera
 
     println!("opening camera ...");
-    let mut camera = match gphoto::Camera::autodetect(&mut context) {
+    let mut camera = match gphoto::Camera::new() {
+        Ok(c) => c,
+        Err(err) => panic!("error creating camera: {}", err)
+    };
+    match camera.init(&mut context) {
         Ok(c) => c,
         Err(err) => panic!("error opening camera: {}", err)
     };
