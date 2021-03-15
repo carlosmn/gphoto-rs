@@ -100,6 +100,11 @@ impl<'a> Port<'a> {
             String::from_utf8_lossy(CStr::from_ptr(path.assume_init()).to_bytes())
         }
     }
+
+    #[doc(hidden)]
+    pub fn as_ptr(&self) -> ::gphoto2::GPPortInfo {
+        self.inner
+    }
 }
 
 #[doc(hidden)]
