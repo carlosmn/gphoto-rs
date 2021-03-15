@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 use std::marker::PhantomData;
 use std::mem;
 
@@ -107,5 +107,92 @@ pub fn from_libgphoto2(_camera: & ::camera::Camera, ptr: ::gphoto2::GPPortInfo) 
     Port {
         inner: ptr,
         __phantom: PhantomData,
+    }
+}
+
+/// A structure representing a list of PortInfo structures
+#[repr(transparent)]
+pub struct PortList(*mut ::gphoto2::GPPortInfoList);
+
+impl Drop for PortList {
+    fn drop(&mut self) {
+        unsafe {
+            ::gphoto2::gp_port_info_list_free(self.0);
+        }
+    }
+}
+
+impl PortList {
+    /// Allocate a new list
+    pub fn new() -> ::Result<Self> {
+        let mut list = mem::MaybeUninit::uninit();
+        try_unsafe!(::gphoto2::gp_port_info_list_new(list.as_mut_ptr()));
+        let list = unsafe { list.assume_init() };
+
+        Ok(PortList(list as *mut _))
+    }
+
+    /// Searches the system for io-drivers and appends them to the list. You
+    /// would normally call this function once after PortList::new() and
+    /// then use this list in order to supply gp_port_set_info with parameters
+    /// or to do auto detection.
+    pub fn load(&mut self) -> ::Result<()> {
+        try_unsafe!(::gphoto2::gp_port_info_list_load(self.as_mut_ptr()));
+
+        Ok(())
+    }
+
+    /// Looks for an entry in the list with the exact given name.
+    ///
+    /// Returns the index of the entry or an error
+    pub fn lookup_name(&mut self, name: &str) -> ::Result<usize> {
+        let cname = match CString::new(name) {
+            Ok(s) => s,
+            Err(_) => return Err(::error::from_libgphoto2(::gphoto2::GP_ERROR_BAD_PARAMETERS)),
+        };
+        let idx = match unsafe {
+            ::gphoto2::gp_port_info_list_lookup_name(self.as_mut_ptr(), cname.as_ptr())
+        } {
+            idx if idx >= 0 => idx,
+            err => return Err(::error::from_libgphoto2(err)),
+        };
+
+        Ok(idx as usize)
+    }
+
+    /// Looks for an entry in the list with the supplied path. If no exact match
+    /// can be found, a regex search will be performed in the hope some driver
+    /// claimed ports like "serial:*".
+    ///
+    /// Returns the index of the entry or an error
+    pub fn lookup_path(&mut self, path: &str) -> ::Result<usize> {
+        let cpath = match CString::new(path) {
+            Ok(s) => s,
+            Err(_) => return Err(::error::from_libgphoto2(::gphoto2::GP_ERROR_BAD_PARAMETERS)),
+        };
+        let idx = match unsafe {
+            ::gphoto2::gp_port_info_list_lookup_path(self.as_mut_ptr(), cpath.as_ptr())
+        } {
+            idx if idx >= 0 => idx,
+            err => return Err(::error::from_libgphoto2(err)),
+        };
+
+        Ok(idx as usize)
+    }
+
+    /// Return a mutable underlying pointer
+    fn as_mut_ptr(&mut self) -> *mut ::gphoto2::GPPortInfoList {
+        self.0
+    }
+
+    /// Get the amount of entries in the list
+    pub fn len(&mut self) -> usize {
+        let l = unsafe { ::gphoto2::gp_port_info_list_count(self.0) };
+
+        if l < 0 {
+            panic!();
+        }
+
+        l as usize
     }
 }

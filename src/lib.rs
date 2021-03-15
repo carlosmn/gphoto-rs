@@ -6,7 +6,7 @@ pub use abilities::{Abilities,DeviceType,DriverStatus,CameraOperation,FileOperat
 pub use camera::{Camera,CameraFile,CameraList};
 pub use context::{Context};
 pub use media::{Media,FileMedia};
-pub use port::{PortType,Port};
+pub use port::{PortType,Port,PortList};
 pub use storage::{Storage,StorageType,FilesystemType,AccessType};
 pub use version::{LibraryVersion,libgphoto2_version};
 
