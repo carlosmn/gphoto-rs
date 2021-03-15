@@ -106,6 +106,17 @@ impl Camera {
         ::port::from_libgphoto2(self, unsafe { port.assume_init() })
     }
 
+    /// Specify which port the camera should be connected to.
+    ///
+    /// Call this before Camera::init() in order to select a specific camera.
+    pub fn set_port(&mut self, port: Port) -> ::Result<()> {
+        try_unsafe! {
+            ::gphoto2::gp_camera_set_port_info(self.camera, port.as_ptr())
+        };
+
+        Ok(())
+    }
+
     /// Retrieves the camera's abilities.
     pub fn abilities(&self) -> Abilities {
         let mut abilities = mem::MaybeUninit::uninit();
